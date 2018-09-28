@@ -32,6 +32,7 @@ import javax.swing.ImageIcon;
 public class PGTUtil {
     public static final String dictionaryXID = "dictionary";
     public static final String pgVersionXID = "PolyGlotVer";
+    public static final String dictionarySaveDate = "DictSaveDate";
     
     // properties on words
     public static final String lexiconXID = "lexicon";
@@ -204,6 +205,14 @@ public class PGTUtil {
     public static final String EtyExternalWordValueXID = "EtymologyExternalWordValue";
     public static final String EtyExternalWordOriginXID = "EtymologyExternalWordOrigin";
     public static final String EtyExternalWordDefinitionXID = "EtymologyExternalWordDefinition";
+    
+    // TODO Node constants
+    public static final String ToDoLogXID = "ToDoLog";
+    public static final String ToDoNodeXID = "ToDoNodeHead";
+    public static final String ToDoNodeDoneXID = "ToDoNodeDone";
+    public static final String ToDoNodeLabelXID = "ToDoNodeLabel";
+    public static final String ToDoNodeColorXID = "ToDoNodeColor";
+    public static final String ToDoRoot = "ToDoRoot";
 
     // constants for PolyGlot options found in PolyGlot.ini
     public static final int optionsNumLastFiles = 5;
@@ -213,6 +222,9 @@ public class PGTUtil {
     public static final String optionsScreensOpen = "ScreensUp";
     public static final String optionsAutoResize = "OptionsResize";
     public static final String optionsMenuFontSize = "OptionsMenuFontSize";
+    public static final String optionsNightMode = "OptionsNightMode";
+    public static final String optionsReversionsCount = "OptionsReversionCount";
+    public static final String optionsToDoDividerLocation = "ToDoDividerLocation";
 
     // string constants
     public static final String dictFileName = "PGDictionary.xml";
@@ -221,6 +233,8 @@ public class PGTUtil {
     public static final String logoGraphSavePath = "logoGraphs/";
     public static final String imagesSavePath = "images/";
     public static final String grammarSoundSavePath = "grammarSounds/";
+    public static final String reversionSavePath = "reversion/";
+    public static final String reversionBaseFileName = "reversionXMLFile";
     public static final String emptyFile = "<EMPTY>";
     public static final String tempFile = "xxTEMPPGTFILExx";
     public static final String polyGlotFont = "PolyGlot";
@@ -245,11 +259,13 @@ public class PGTUtil {
     public static final String scrIPARefChart;
     public static final String scrQuizGenDialog;
     
-    // int constants...
+    // numeric constants...
     public static final Integer numMenuFlashes = 4;
     public static final Integer menuFlashSleep = 200;
     public static final Double defaultFontSize = 12.0;
     public static final int maxProcRecursion = 20;
+    public static final int defaultMaxRollbackVersions = 10;
+    public static final int maxFilePathLength = 1000;
     
     // color constants
     public static final Color colorDisabledBG;
@@ -257,7 +273,38 @@ public class PGTUtil {
     public static final Color colorSelectedBG;
     public static final Color colorDisabledForeground;
     public static final Color colorMouseoverBorder;
+    public static final Color colorText;
+    public static final Color colorDefaultText;
+    public static final Color colorDefaultTextNight;
+    public static final Color colorTextBG;
+    public static final Color colorTextNight;
+    public static final Color colorTextBGNight;
+    public static final Color colorTextDisabled;
+    public static final Color colorTextDisabledBG;
+    public static final Color colorTextDisabledNight;
+    public static final Color colorTextDisabledBGNight;
+    public static final Color colorCheckboxSelected;
+    public static final Color colorCheckboxBackground;
+    public static final Color colorCheckboxOutline;
+    public static final Color colorCheckboxHover;
+    public static final Color colorCheckboxClicked;
+    public static final Color colorCheckBoxFieldBack;
+    public static final Color colorCheckboxSelectedNight;
+    public static final Color colorCheckboxBackgroundNight;
+    public static final Color colorCheckboxOutlineNight;
+    public static final Color colorCheckboxHoverNight;
+    public static final Color colorCheckboxClickedNight;
+    public static final Color colorCheckBoxFieldBackNight;
+    public static final Color colorCheckboxSelectedDisabled;
+    public static final Color colorCheckboxBackgroundDisabled;
+    public static final Color colorCheckboxOutlineDisabled;
+    public static final Color colorCheckboxHoverDisabled;
+    public static final Color colorCheckboxClickedDisabled;
+    public static final Color colorCheckBoxFieldBackDisabled;
     
+    // visual style constants
+    public static final int checkboxRounding = 3;
+
     // images and icons that only need to be loaded once
     public static final ImageIcon addButtonIcon;
     public static final ImageIcon delButtonIcon;
@@ -271,6 +318,41 @@ public class PGTUtil {
         colorSelectedBG = Color.decode("#7979ef");
         colorDisabledForeground = Color.decode("#808080");
         colorMouseoverBorder = Color.decode("#909090");
+        colorText = Color.decode("#000000");
+        colorTextBG = Color.decode("#ffffff");
+        colorTextNight = Color.decode("#ffffff");
+        colorTextBGNight = Color.decode("#000000");
+        colorDefaultText = Color.lightGray;
+        colorDefaultTextNight = Color.darkGray;
+        colorTextDisabled = Color.lightGray;
+        colorTextDisabledBG = Color.darkGray;
+        colorTextDisabledNight = Color.lightGray;
+        colorTextDisabledBGNight = Color.darkGray;
+        colorCheckboxSelected = Color.black;
+        colorCheckboxBackground = Color.white;
+        colorCheckboxOutline = Color.black;
+        colorCheckboxHover = Color.black;
+        colorCheckboxClicked = Color.lightGray;
+        colorCheckBoxFieldBack = Color.white;
+        colorCheckboxSelectedNight = Color.gray;
+        colorCheckboxBackgroundNight = Color.black;
+        colorCheckboxOutlineNight = Color.darkGray;
+        colorCheckboxHoverNight = Color.lightGray;
+        colorCheckboxClickedNight = Color.white;
+        colorCheckBoxFieldBackNight = Color.black;
+        colorCheckboxSelectedDisabled = Color.gray;
+        colorCheckboxBackgroundDisabled = Color.lightGray;
+        colorCheckboxOutlineDisabled = Color.gray;
+        colorCheckboxHoverDisabled = Color.darkGray;
+        colorCheckboxClickedDisabled = Color.darkGray;
+        colorCheckBoxFieldBackDisabled = Color.gray;
+        
+        /*
+        Color selected;
+        Color backGround;
+        Color outLine;
+        Color hover = Color.black;
+        */
         
         scrNameLexicon = ScrLexicon.class.getName();
         scrNameGrammar = ScrGrammarGuide.class.getName();

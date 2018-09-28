@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, draque
+ * Copyright (c) 2018, DThompson
  * All rights reserved.
  *
  * Licensed under: Creative Commons Attribution-NonCommercial 4.0 International Public License
@@ -19,47 +19,27 @@
  */
 package PolyGlot.CustomControls;
 
-import PolyGlot.DictCore;
-import java.awt.Font;
-import java.awt.font.TextAttribute;
-import java.util.Map;
-import javax.swing.JList;
+import PolyGlot.Nodes.ToDoNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeNode;
 
 /**
  *
- * @author draque
+ * @author DThompson
  */
-public class PList extends JList {
-    private DictCore core;
-    private final boolean isConFont;
-    boolean ignoreRepaint = false;
+public class PToDoTreeModel extends DefaultTreeModel {
     
-    public PList(DictCore _core, boolean _isConFont) {        
-        core = _core;
-        isConFont = _isConFont;
+    public PToDoTreeModel(TreeNode root) {
+        super(root);
+        
+        populateTree((ToDoTreeNode)root);
     }
     
-    public void setCore(DictCore _core) {
-        core = _core;
-    }
-
-    @Override
-    public void repaint() {
-        if (ignoreRepaint) {
-            return;
+    private void populateTree(ToDoTreeNode treeNode) {
+        for(ToDoNode toDoNode : treeNode.getNode().getChildren()) {
+            ToDoTreeNode child = ToDoTreeNode.createToDoTreeNode(toDoNode);
+            treeNode.initialPopulateAdd(child);
+            populateTree(child);
         }
-        
-        if (core != null) { // initial paint happens before initilization complete
-            Font testFont = core.getPropertiesManager().getFontCon();
-            ignoreRepaint = true;
-            if (isConFont) {
-                setFont(testFont);
-            } else {
-                setFont(core.getPropertiesManager().getFontLocal());
-            }
-            ignoreRepaint = false;
-        }
-        
-        super.repaint(); 
     }
 }

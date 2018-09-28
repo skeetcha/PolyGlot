@@ -322,11 +322,6 @@ public class ScrUpdateAlert extends PDialog {
     }
     
     @Override
-    public boolean thisOrChildrenFocused() {
-        return this.isFocusOwner();
-    }
-    
-    @Override
     public final void dispose() {
         super.dispose();
     }
@@ -401,17 +396,6 @@ public class ScrUpdateAlert extends PDialog {
     }// </editor-fold>//GEN-END:initComponents
 
     public static void run(boolean verbose, DictCore core) throws Exception {
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (javax.swing.UnsupportedLookAndFeelException | IllegalAccessException | InstantiationException | ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ScrUpdateAlert.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-
         ScrUpdateAlert s = new ScrUpdateAlert(verbose, core);
         s.setModal(false);
     }

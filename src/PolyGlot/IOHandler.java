@@ -24,8 +24,12 @@ import PolyGlot.ManagersCollections.GrammarManager;
 import PolyGlot.ManagersCollections.LogoCollection;
 import PolyGlot.CustomControls.GrammarSectionNode;
 import PolyGlot.CustomControls.GrammarChapNode;
+import PolyGlot.CustomControls.InfoBox;
 import PolyGlot.ManagersCollections.ImageCollection;
+import PolyGlot.ManagersCollections.OptionsManager;
+import PolyGlot.ManagersCollections.ReversionManager;
 import PolyGlot.Nodes.ImageNode;
+import PolyGlot.Nodes.ReversionNode;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Dimension;
@@ -39,6 +43,7 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -59,6 +64,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -290,6 +296,21 @@ public class IOHandler {
 
         return ret;
     }
+    
+    /**
+     * Creates a custhandler object from a reversion byte array of a language state
+     * @param byteArray byte array containing XML of language state
+     * @param _core dictionary core
+     * @return new custhandler class
+     * @throws IOException on parse error
+     */
+    public static CustHandler getHandlerFromByteArray(byte[] byteArray, DictCore _core) throws IOException {
+        try {
+            return CustHandlerFactory.getCustHandler(new ByteArrayInputStream(byteArray), _core);
+        } catch (Exception e) {
+            throw new IOException(e.getLocalizedMessage());
+        }
+    }
 
     /**
      * Opens an image via GUI and returns as buffered image Returns null if user
@@ -326,6 +347,24 @@ public class IOHandler {
         File file = new File(fullPath);
         return file.getName();
     }
+    
+    /**
+     * Deletes options file
+     * @param core 
+     */
+    public static void deleteIni(DictCore core) {
+        File f = new File(core.getWorkingDirectory() + PGTUtil.polyGlotIni);        
+        if (!f.exists()) {
+            return;
+        }
+        
+        try {
+            f.delete();
+        } catch (Exception e) {
+            InfoBox.error("Permissions Error", "PolyGlot lacks permissions to write to its native folder.\n"
+                    + "Please move to a folder with full write permissions: " + e.getLocalizedMessage(), null);
+        }
+    }
 
     /**
      * Loads all option data from ini file, if none, ignore. One will be created
@@ -335,6 +374,7 @@ public class IOHandler {
      * @throws IOException on failure to open existing file
      */
     public static void loadOptionsIni(DictCore core) throws Exception {
+        OptionsManager opMan = core.getOptionsManager();
         File f = new File(core.getWorkingDirectory() + PGTUtil.polyGlotIni);
         if (!f.exists() || f.isDirectory()) {
             return;
@@ -342,6 +382,8 @@ public class IOHandler {
 
         try (BufferedReader br = new BufferedReader(new FileReader(
                 core.getWorkingDirectory() + PGTUtil.polyGlotIni))) {
+            String loadProblems = "";
+            
             for (String line; (line = br.readLine()) != null;) {
                 String[] bothVal = line.split("=");
 
@@ -357,11 +399,11 @@ public class IOHandler {
 
                 switch (bothVal[0]) {
                     case PGTUtil.optionsLastFiles:
-                        core.getOptionsManager().getLastFiles().addAll(Arrays.asList(bothVal[1].split(",")));
+                        opMan.getLastFiles().addAll(Arrays.asList(bothVal[1].split(",")));
                         break;
                     case PGTUtil.optionsScreensOpen:
                         for (String screen : bothVal[1].split(",")) {
-                            core.getOptionsManager().addScreenUp(screen);
+                            opMan.addScreenUp(screen);
                         }
                         break;
                     case PGTUtil.optionsScreenPos:
@@ -373,11 +415,10 @@ public class IOHandler {
                             String[] splitSet = curPosSet.split(":");
 
                             if (splitSet.length != 3) {
-                                throw new Exception("Malformed Screen Position: "
-                                        + curPosSet);
+                                loadProblems += "Malformed Screen Position: " + curPosSet + "\n";
                             }
                             Point p = new Point(Integer.parseInt(splitSet[1]), Integer.parseInt(splitSet[2]));
-                            core.getOptionsManager().setScreenPosition(splitSet[0], p);
+                            opMan.setScreenPosition(splitSet[0], p);
                         }
                         break;
                     case PGTUtil.optionsScreensSize:
@@ -389,25 +430,36 @@ public class IOHandler {
                             String[] splitSet = curSizeSet.split(":");
 
                             if (splitSet.length != 3) {
-                                throw new Exception("Malformed Screen Size: "
-                                        + curSizeSet);
+                                loadProblems += "Malformed Screen Size: " + curSizeSet + "\n";
                             }
                             Dimension d = new Dimension(Integer.parseInt(splitSet[1]), Integer.parseInt(splitSet[2]));
-                            core.getOptionsManager().setScreenSize(splitSet[0], d);
+                            opMan.setScreenSize(splitSet[0], d);
                         }
                         break;
                     case PGTUtil.optionsAutoResize:
-                        core.getOptionsManager().setAnimateWindows(bothVal[1].equals(PGTUtil.True));
+                        opMan.setAnimateWindows(bothVal[1].equals(PGTUtil.True));
                         break;
                     case PGTUtil.optionsMenuFontSize:
-                        core.getOptionsManager().setMenuFontSize(Double.parseDouble(bothVal[1]));
+                        opMan.setMenuFontSize(Double.parseDouble(bothVal[1]));
+                        break;
+                    case PGTUtil.optionsNightMode:
+                        opMan.setNightMode(bothVal[1].equals(PGTUtil.True));
+                        break;
+                    case PGTUtil.optionsReversionsCount:
+                        opMan.setMaxReversionCount(Integer.parseInt(bothVal[1]));
+                        break;
+                    case PGTUtil.optionsToDoDividerLocation:
+                        opMan.setToDoBarPosition(Integer.parseInt(bothVal[1]));
                         break;
                     case "\n":
                         break;
                     default:
-                        throw new Exception("Unrecognized value: " + bothVal[0]
-                                + " in PolyGlot.ini.");
+                        loadProblems += "Unrecognized value: " + bothVal[0] + " in PolyGlot.ini." + "\n";
                 }
+            }
+            
+            if (!loadProblems.isEmpty()) {
+                throw new Exception("Problems loading ini file: \n" + loadProblems);
             }
         }
     }
@@ -423,21 +475,24 @@ public class IOHandler {
      */
     public static void parseHandler(String _fileName, CustHandler _handler)
             throws IOException, ParserConfigurationException, SAXException {
-        SAXParserFactory factory = SAXParserFactory.newInstance();
-        SAXParser saxParser = factory.newSAXParser();
-
-        if (IOHandler.isFileZipArchive(_fileName)) {
-            try (ZipFile zipFile = new ZipFile(_fileName)) {
-                ZipEntry xmlEntry = zipFile.getEntry(PGTUtil.dictFileName);
-                try (InputStream ioStream = zipFile.getInputStream(xmlEntry)) {
-                    saxParser.parse(ioStream, _handler);
-                }
-            }
-        } else {
-            try (InputStream ioStream = new FileInputStream(_fileName)) {
-                saxParser.parse(ioStream, _handler);
+        try (ZipFile zipFile = new ZipFile(_fileName)) {
+            ZipEntry xmlEntry = zipFile.getEntry(PGTUtil.dictFileName);
+            try (InputStream ioStream = zipFile.getInputStream(xmlEntry)) {
+                parseHandlerInternal(ioStream, _handler);
             }
         }
+    }
+    
+    public static void parseHandlerByteArray(byte[] reversion, CustHandler _handler) 
+            throws ParserConfigurationException, IOException, SAXException {
+        parseHandlerInternal(new ByteArrayInputStream(reversion), _handler);
+    }
+    
+    private static void parseHandlerInternal(InputStream stream, CustHandler _handler) 
+            throws ParserConfigurationException, SAXException, IOException {
+        SAXParserFactory factory = SAXParserFactory.newInstance();
+        SAXParser saxParser = factory.newSAXParser();
+        saxParser.parse(stream, _handler);
     }
 
     /**
@@ -495,7 +550,7 @@ public class IOHandler {
                             out.putNextEntry(new ZipEntry(PGTUtil.conFontFileName));
                         } else {
                             out.putNextEntry(new ZipEntry(PGTUtil.localFontFileName));
-                        } 
+                        }
                         int length;
 
                         while ((length = fis.read(buffer)) > 0) {
@@ -506,7 +561,11 @@ public class IOHandler {
                     }
                 }
             } else {
-                out.putNextEntry(new ZipEntry(PGTUtil.conFontFileName));
+                if (isConFont) {
+                    out.putNextEntry(new ZipEntry(PGTUtil.conFontFileName));
+                } else {
+                    out.putNextEntry(new ZipEntry(PGTUtil.localFontFileName));
+                }
                 out.write(cachedFont);
                 out.closeEntry();
             }
@@ -516,7 +575,8 @@ public class IOHandler {
         return writeLog;
     }
     
-    public static void writeFile(String _fileName, Document doc, DictCore core) throws IOException, TransformerException {
+    public static void writeFile(String _fileName, Document doc, DictCore core, Instant saveTime) 
+            throws IOException, TransformerException {
         File finalFile = new File(_fileName);
         String writeLog = "";
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
@@ -526,8 +586,8 @@ public class IOHandler {
             transformer.transform(new DOMSource(doc), new StreamResult(writer));
 
             StringBuilder sb = new StringBuilder();
-
             sb.append(writer.getBuffer().toString());
+            byte[] xmlData = sb.toString().getBytes("UTF-8");
 
             // save file to temp location initially.
             final File f = File.createTempFile(_fileName, null);
@@ -536,8 +596,7 @@ public class IOHandler {
                     ZipEntry e = new ZipEntry(PGTUtil.dictFileName);
                     out.putNextEntry(e);
 
-                    byte[] data = sb.toString().getBytes("UTF-8");
-                    out.write(data, 0, data.length);
+                    out.write(xmlData, 0, xmlData.length);
 
                     out.closeEntry();
                     
@@ -553,120 +612,10 @@ public class IOHandler {
                             core,
                             false);
 
-//                    byte[] cachedFont = core.getPropertiesManager().getCachedFont();
-//
-//                    // only search for font if the cached font is null
-//                    if (cachedFont == null) {
-//                        // embed font in PGD archive if applicable
-//                        File fontFile = null;
-//                        try {
-//                            fontFile = IOHandler.getFontFile(core.getPropertiesManager().getFontCon());
-//                        } catch (Exception ex) {
-//                            writeLog += "\nerror: " + ex.getLocalizedMessage();
-//                        }
-//
-//                        if (fontFile != null) {
-//                            try {
-//                                try (FileInputStream fontInputStream = new FileInputStream(fontFile)) {
-//                                    core.getPropertiesManager().setCachedFont(IOUtils.toByteArray(fontInputStream));
-//                                }
-//                                byte[] buffer = new byte[1024];
-//                                try (FileInputStream fis = new FileInputStream(fontFile)) {
-//                                    out.putNextEntry(new ZipEntry(PGTUtil.conFontFileName));
-//                                    int length;
-//
-//                                    while ((length = fis.read(buffer)) > 0) {
-//                                        out.write(buffer, 0, length);
-//                                    }
-//
-//                                    out.closeEntry();
-//                                }
-//                            } catch (FileNotFoundException ex) {
-//                                writeLog += "\nUnable to write font to archive: " + ex.getMessage();
-//                            } catch (IOException ex) {
-//                                writeLog += "\nUnable to write font to archive: " + ex.getMessage();
-//                            }
-//                        }
-//                    } else {
-//                        try {
-//                            out.putNextEntry(new ZipEntry(PGTUtil.conFontFileName));
-//                            out.write(cachedFont);
-//                            out.closeEntry();
-//                        } catch (IOException ex) {
-//                            writeLog += "\nUnable to write font to archive: " + ex.getMessage();
-//                        }
-//                    }
-
-                    // write all logograph images to file
-                    List<LogoNode> logoNodes = core.getLogoCollection().getAllLogos();
-                    if (!logoNodes.isEmpty()) {
-                        try {
-                            out.putNextEntry(new ZipEntry(PGTUtil.logoGraphSavePath));
-                            for (LogoNode curNode : logoNodes) {
-                                try {
-                                    out.putNextEntry(new ZipEntry(PGTUtil.logoGraphSavePath
-                                            + curNode.getId().toString() + ".png"));
-
-                                    ImageIO.write(curNode.getLogoGraph(), "png", out);
-
-                                    out.closeEntry();
-                                } catch (IOException ex) {
-                                    writeLog += "\nUnable to save logograph: " + ex.getLocalizedMessage();
-                                }
-                            }
-                        } catch (IOException ex) {
-                            writeLog += "\nUnable to save Logographs: " + ex.getLocalizedMessage();
-                        }
-                    }
-
-                    // Write all general images in image repository to file
-                    List<ImageNode> imageNodes = core.getImageCollection().getAllImages();
-                    if (!imageNodes.isEmpty()) {
-                        try {
-                            out.putNextEntry(new ZipEntry(PGTUtil.imagesSavePath));
-                            for (ImageNode curNode : imageNodes) {
-                                try {
-                                    out.putNextEntry(new ZipEntry(PGTUtil.imagesSavePath
-                                            + curNode.getId().toString() + ".png"));
-
-                                    ImageIO.write(curNode.getImage(), "png", out);
-
-                                    out.closeEntry();
-                                } catch (IOException ex) {
-                                    writeLog += "\nUnable to save image: " + ex.getLocalizedMessage();
-                                }
-                            }
-                        } catch (IOException ex) {
-                            writeLog += "\nUnable to save Images: " + ex.getLocalizedMessage();
-                        }
-                    }
-
-                    // write all grammar wav recordings to file
-                    Map<Integer, byte[]> grammarSoundMap = core.getGrammarManager().getSoundMap();
-                    Iterator<Entry<Integer, byte[]>> gramSoundIt = grammarSoundMap.entrySet().iterator();
-                    if (gramSoundIt.hasNext()) {
-                        try {
-                            out.putNextEntry(new ZipEntry(PGTUtil.grammarSoundSavePath));
-
-                            while (gramSoundIt.hasNext()) {
-                                Entry<Integer, byte[]> curEntry = gramSoundIt.next();
-                                Integer curId = curEntry.getKey();
-                                byte[] curSound = curEntry.getValue();
-
-                                try {
-                                    out.putNextEntry(new ZipEntry(PGTUtil.grammarSoundSavePath
-                                            + curId.toString() + ".raw"));
-                                    out.write(curSound);
-                                    out.closeEntry();
-                                } catch (IOException ex) {
-                                    writeLog += "\nUnable to save sound: " + ex.getLocalizedMessage();
-                                }
-
-                            }
-                        } catch (IOException ex) {
-                            writeLog += "\nUnable to save sounds: " + ex.getLocalizedMessage();
-                        }
-                    }
+                    writeLog += writeLogoNodesToArchive(out, core);
+                    writeLog += writeImagesToArchive(out, core);
+                    writeLog += writeWavToArchive(out, core);
+                    writeLog += writePriorStatesToArchive(out, core);
 
                     out.finish();
                     out.close();
@@ -674,7 +623,7 @@ public class IOHandler {
             }
 
             // attempt to open file in dummy core. On success, copy file to end
-            // destination, on fail, delete file, and inform user by bubbling error
+            // destination, on fail, delete file and inform user by bubbling error
             try {
                 DictCore test = new DictCore();
                 test.readFile(f.getAbsolutePath());
@@ -688,11 +637,116 @@ public class IOHandler {
             } catch (IOException ex) {
                 throw new IOException("Unable to save file: " + ex.getMessage());
             }
+            
+            core.getReversionManager().addVersion(xmlData, saveTime);
         }
 
         if (writeLog.length() != 0) {
-            throw new IOException("Problems saving file " + _fileName + writeLog);
+            InfoBox.warning("File Save Issues", "Problems encountered when saving file " + _fileName + writeLog, null);
         }
+    }
+    
+    private static String writePriorStatesToArchive(ZipOutputStream out, DictCore core) throws IOException {
+        String writeLog = "";
+        List<ReversionNode> reversionList = core.getReversionManager().getReversionList();
+        
+        try {
+            out.putNextEntry(new ZipEntry(PGTUtil.reversionSavePath));
+
+            for (Integer i = 0; i < reversionList.size(); i++) {
+                ReversionNode node = reversionList.get(i);
+                
+                out.putNextEntry(new ZipEntry(PGTUtil.reversionSavePath + PGTUtil.reversionBaseFileName 
+                        + i.toString()));
+                out.write(node.value);
+                out.closeEntry();
+            }
+        } catch (IOException e) {
+            throw new IOException("Unable to create reversion files.");
+        }
+        
+        return writeLog;
+    }
+    
+    private static String writeLogoNodesToArchive(ZipOutputStream out, DictCore core) {
+        String writeLog = "";
+        List<LogoNode> logoNodes = core.getLogoCollection().getAllLogos();
+        if (!logoNodes.isEmpty()) {
+            try {
+                out.putNextEntry(new ZipEntry(PGTUtil.logoGraphSavePath));
+                for (LogoNode curNode : logoNodes) {
+                    try {
+                        out.putNextEntry(new ZipEntry(PGTUtil.logoGraphSavePath
+                                + curNode.getId().toString() + ".png"));
+
+                        ImageIO.write(curNode.getLogoGraph(), "png", out);
+
+                        out.closeEntry();
+                    } catch (IOException ex) {
+                        writeLog += "\nUnable to save logograph: " + ex.getLocalizedMessage();
+                    }
+                }
+            } catch (IOException ex) {
+                writeLog += "\nUnable to save Logographs: " + ex.getLocalizedMessage();
+            }
+        }
+        
+        return writeLog;
+    }
+    
+    private static String writeWavToArchive(ZipOutputStream out, DictCore core) {
+        String writeLog = "";
+        Map<Integer, byte[]> grammarSoundMap = core.getGrammarManager().getSoundMap();
+        Iterator<Entry<Integer, byte[]>> gramSoundIt = grammarSoundMap.entrySet().iterator();
+        if (gramSoundIt.hasNext()) {
+            try {
+                out.putNextEntry(new ZipEntry(PGTUtil.grammarSoundSavePath));
+
+                while (gramSoundIt.hasNext()) {
+                    Entry<Integer, byte[]> curEntry = gramSoundIt.next();
+                    Integer curId = curEntry.getKey();
+                    byte[] curSound = curEntry.getValue();
+
+                    try {
+                        out.putNextEntry(new ZipEntry(PGTUtil.grammarSoundSavePath
+                                + curId.toString() + ".raw"));
+                        out.write(curSound);
+                        out.closeEntry();
+                    } catch (IOException ex) {
+                        writeLog += "\nUnable to save sound: " + ex.getLocalizedMessage();
+                    }
+
+                }
+            } catch (IOException ex) {
+                writeLog += "\nUnable to save sounds: " + ex.getLocalizedMessage();
+            }
+        }
+        return writeLog;
+    }
+    
+    private static String writeImagesToArchive(ZipOutputStream out, DictCore core) {
+        String writeLog = "";
+        List<ImageNode> imageNodes = core.getImageCollection().getAllImages();
+        if (!imageNodes.isEmpty()) {
+            try {
+                out.putNextEntry(new ZipEntry(PGTUtil.imagesSavePath));
+                for (ImageNode curNode : imageNodes) {
+                    try {
+                        out.putNextEntry(new ZipEntry(PGTUtil.imagesSavePath
+                                + curNode.getId().toString() + ".png"));
+
+                        ImageIO.write(curNode.getImage(), "png", out);
+
+                        out.closeEntry();
+                    } catch (IOException ex) {
+                        writeLog += "\nUnable to save image: " + ex.getLocalizedMessage();
+                    }
+                }
+            } catch (IOException ex) {
+                writeLog += "\nUnable to save Images: " + ex.getLocalizedMessage();
+            }
+        }
+        return writeLog;
     }
 
     public static byte[] getFontFileArray(Font font) throws Exception {
@@ -707,6 +761,7 @@ public class IOHandler {
     private static Font wrapFont(Font font) {
         Map attributes = font.getAttributes();
         attributes.put(TextAttribute.LIGATURES, TextAttribute.LIGATURES_ON);
+        attributes.put(TextAttribute.KERNING, TextAttribute.KERNING_ON);
         return font.deriveFont(attributes);
     }
 
@@ -939,10 +994,6 @@ public class IOHandler {
      */
     public static void loadLogographs(LogoCollection logoCollection,
             String fileName) throws Exception {
-        if (!isFileZipArchive(fileName)) {
-            return;
-        }
-
         Iterator<LogoNode> it = logoCollection.getAllLogos().iterator();
         try (ZipFile zipFile = new ZipFile(fileName)) {
             while (it.hasNext()) {
@@ -955,6 +1006,47 @@ public class IOHandler {
                     img = ImageIO.read(imageStream);
                 }
                 curNode.setLogoGraph(img);
+            }
+        }
+    }
+    
+    /**
+     * Loads all reversion XML files from polyglot archive
+     * @param reversionManager reversion manager to load to
+     * @param fileName full path of polyglot archive
+     * @throws IOException on read error
+     */
+    public static void loadReversionStates(ReversionManager reversionManager,
+            String fileName) throws IOException, Exception {
+        try (ZipFile zipFile = new ZipFile(fileName)) {
+            Integer i = 0;
+            String errorLog = "";
+            DictCore tmpCore;
+            
+            ZipEntry reversion = zipFile.getEntry(PGTUtil.reversionSavePath
+                    + PGTUtil.reversionBaseFileName + i.toString());
+            
+            while (reversion != null) {
+                tmpCore = new DictCore();
+                errorLog += tmpCore.testLoadReversion(IOUtils.toByteArray(zipFile.getInputStream(reversion))) + "\n";
+                
+                reversionManager.addVersionToEnd(IOUtils.toByteArray(zipFile.getInputStream(reversion)),
+                        tmpCore.getLastSaveTime());
+                i++;
+                reversion = zipFile.getEntry(PGTUtil.reversionSavePath
+                        + PGTUtil.reversionBaseFileName + i.toString());
+            }
+            
+            // remember to load latest state in addition to all prior ones
+            reversion = zipFile.getEntry(PGTUtil.dictFileName);
+            tmpCore = new DictCore();
+            errorLog += tmpCore.testLoadReversion(IOUtils.toByteArray(zipFile.getInputStream(reversion))) + "\n";
+            reversionManager.addVersionToEnd(IOUtils.toByteArray(zipFile.getInputStream(reversion)),
+                        tmpCore.getLastSaveTime());
+            
+            // bubble any loading problems up as error
+            if (!errorLog.isEmpty()) {
+                throw new Exception(errorLog);
             }
         }
     }
@@ -1188,33 +1280,38 @@ public class IOHandler {
         try (Writer f0 = new BufferedWriter(new OutputStreamWriter(
                 new FileOutputStream(core.getWorkingDirectory()
                         + PGTUtil.polyGlotIni), "UTF-8"))) {
+            OptionsManager opMan = core.getOptionsManager();
             String newLine = System.getProperty("line.separator");
             String nextLine;
 
             if (!testCanWrite(core.getWorkingDirectory() + PGTUtil.polyGlotIni)) {
                 throw new IOException("Unable to save settings. Polyglot does not have permission to write to folder: "
-                        + core.getWorkingDirectory() + ". This is most common when running from Program Files in Windows.");
+                        + core.getWorkingDirectory() 
+                        + ". This is most common when running from Program Files in Windows.");
             }
 
             nextLine = PGTUtil.optionsLastFiles + "=";
-            for (String file : core.getOptionsManager().getLastFiles()) {
-                if (nextLine.endsWith("=")) {
-                    nextLine += file;
-                } else {
-                    nextLine += ("," + file);
+            for (String file : opMan.getLastFiles()) {
+                // only write to ini if 1) the max file path length is not absurd/garbage, and 2) the file exists
+                if (file.length() < PGTUtil.maxFilePathLength && new File(file).exists()) {
+                    if (nextLine.endsWith("=")) {
+                        nextLine += file;
+                    } else {
+                        nextLine += ("," + file);
+                    }
                 }
             }
             f0.write(nextLine + newLine);
 
             nextLine = PGTUtil.optionsScreenPos + "=";
-            for (Entry<String, Point> curPos : core.getOptionsManager().getScreenPositions().entrySet()) {
+            for (Entry<String, Point> curPos : opMan.getScreenPositions().entrySet()) {
                 nextLine += ("," + curPos.getKey() + ":" + curPos.getValue().x + ":"
                         + curPos.getValue().y);
             }
             f0.write(nextLine + newLine);
 
             nextLine = PGTUtil.optionsScreensSize + "=";
-            for (Entry<String, Dimension> curSize : core.getOptionsManager().getScreenSizes().entrySet()) {
+            for (Entry<String, Dimension> curSize : opMan.getScreenSizes().entrySet()) {
                 nextLine += ("," + curSize.getKey() + ":" + curSize.getValue().width + ":"
                         + curSize.getValue().height);
             }
@@ -1222,15 +1319,26 @@ public class IOHandler {
             f0.write(nextLine + newLine);
             nextLine = PGTUtil.optionsScreensOpen + "=";
 
-            for (String screen : core.getOptionsManager().getLastScreensUp()) {
+            for (String screen : opMan.getLastScreensUp()) {
                 nextLine += ("," + screen);
             }
             f0.write(nextLine + newLine);
 
-            nextLine = PGTUtil.optionsAutoResize + "=" + (core.getOptionsManager().isAnimateWindows() ? PGTUtil.True : PGTUtil.False);
+            nextLine = PGTUtil.optionsAutoResize + "=" 
+                    + (opMan.isAnimateWindows() ? PGTUtil.True : PGTUtil.False);
             f0.write(nextLine + newLine);
 
-            nextLine = PGTUtil.optionsMenuFontSize + "=" + Double.toString(core.getOptionsManager().getMenuFontSize());
+            nextLine = PGTUtil.optionsMenuFontSize + "=" + Double.toString(opMan.getMenuFontSize());
+            f0.write(nextLine + newLine);
+            
+            nextLine = PGTUtil.optionsNightMode + "="
+                    + (opMan.isNightMode() ? PGTUtil.True : PGTUtil.False);
+            f0.write(nextLine + newLine);
+            
+            nextLine = PGTUtil.optionsReversionsCount + "=" + opMan.getMaxReversionCount();
+            f0.write(nextLine + newLine);
+            
+            nextLine = PGTUtil.optionsToDoDividerLocation + "=" + opMan.getToDoBarPosition();
             f0.write(nextLine + newLine);
         }
     }
@@ -1281,5 +1389,35 @@ public class IOHandler {
         }
 
         return ret;
+    }
+    
+    /**
+     * Returns deepest directory from given path (truncating non-directory files from the end)
+     * @param path path to fetch directory from
+     * @return File representing directory, null if unable to capture directory path for any reason
+     */
+    public static File getDirectoryFromPath(String path) {
+        File ret = new File(path);
+        
+        if (ret.exists()) {
+            while (ret != null && ret.exists() && !ret.isDirectory()) {
+                ret = ret.getParentFile();
+            }
+        }
+        
+        if (!ret.exists()) {
+            ret = null;
+        }
+        
+        return ret;
+    }
+    
+    /**
+     * Wraps File so that I can avoid importing it elsewhere in code
+     * @param path path to file
+     * @return file
+     */
+    public static File getFileFromPath(String path) {
+        return new File(path);
     }
 }

@@ -101,7 +101,6 @@ public class ScrLogoDetails extends PFrame {
     }
     
     private void createNew(DictCore _core, int logoId) {
-        setNimbus();
         core = _core;
         initComponents();
         setupFonts();
@@ -136,13 +135,6 @@ public class ScrLogoDetails extends PFrame {
         populateLogoProps();
         setupListeners();
         super.getRootPane().getContentPane().setBackground(Color.white);
-    }
-
-    @Override
-    public boolean thisOrChildrenFocused() {
-        boolean ret = this.isFocusOwner();
-        ret = ret || (quickView != null && quickView.thisOrChildrenFocused());
-        return ret;
     }
 
     @Override
@@ -796,20 +788,6 @@ public class ScrLogoDetails extends PFrame {
      */
     public void refreshRelatedWords() {
         populateRelatedWords();
-    }
-
-    private void setNimbus() {
-        /* Set the Nimbus look and feel */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ScrLogoDetails.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
     }
 
     /**

@@ -22,6 +22,7 @@ package PolyGlot.CustomControls;
 import PolyGlot.ClipboardHandler;
 import PolyGlot.DictCore;
 import PolyGlot.ManagersCollections.PropertiesManager;
+import PolyGlot.ManagersCollections.VisualStyleManager;
 import PolyGlot.PGTUtil;
 import PolyGlot.PGTools;
 import java.awt.Color;
@@ -92,20 +93,30 @@ public class PTextField extends JTextField {
             setFont(core.getPropertiesManager().getFontLocal());
         }
         setText(defText);
+        setupLook();
     }
-
-    @Override
-    public final void setFont(Font _font) {
-        Font setFont = _font;
-
-        // if conlang font and core exists, set font kerning
-        if (core != null && !overrideFont) {
-            Map attr = _font.getAttributes();
-            attr.put(TextAttribute.TRACKING, core.getPropertiesManager().getKerningSpace());
-            setFont = _font.deriveFont(attr);
+    
+    public final void setupLook() {
+        VisualStyleManager sMan = core.getVisualStyleManager();
+        
+        if (this.isEnabled()) {
+            if (isDefaultText()) {
+                setForeground(sMan.getDefaultTextColor());
+            } else {
+                setForeground(sMan.getTextColor());
+            }
+            setBackground(sMan.getTextBGColor());
+        } else {
+            setForeground(sMan.getDisabledTextColor());
+            setBackground(Color.black);
         }
-
-        super.setFont(setFont);
+        
+        this.putClientProperty("Nimbus.Overrides", core.getVisualStyleManager().getUIOverrides());
+    }
+    
+    @Override
+    public void setBackground(Color b) {
+        super.setBackground(b);
     }
 
     public void setOverrideFont(boolean _overrideFont) {
@@ -279,6 +290,8 @@ public class PTextField extends JTextField {
         if (skipRepaint || core == null) {
             return;
         }
+        
+        setupLook();
 
         try {
             PropertiesManager propMan = core.getPropertiesManager();
@@ -328,7 +341,7 @@ public class PTextField extends JTextField {
         } catch (Exception e) {
             InfoBox.error("Set text error", "Could not set text component: " 
                     + e.getLocalizedMessage(), core.getRootWindow());
-            //e.printStackTrace();
+            e.printStackTrace();
         }
 
         if (isDefaultText() && !defText.equals("")) {

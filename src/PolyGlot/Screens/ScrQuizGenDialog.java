@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, draque.thompson
+ * Copyright (c) 2016-2018, draque.thompson
  * All rights reserved.
  *
  * Licensed under: Creative Commons Attribution-NonCommercial 4.0 International Public License
@@ -380,17 +380,6 @@ public class ScrQuizGenDialog extends PFrame {
      * @return 
      */
     public static ScrQuizGenDialog run(final DictCore core) {
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ScrQuizGenDialog.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-
         ScrQuizGenDialog s = new ScrQuizGenDialog(core);
         s.setVisible(true);
         return s;
@@ -399,11 +388,6 @@ public class ScrQuizGenDialog extends PFrame {
     public void updateAllValues(DictCore _core) {
         core = _core;
         setupScreen();
-    }
-
-    @Override
-    public boolean thisOrChildrenFocused() {
-        return this.isFocused();
     }
 
     @Override

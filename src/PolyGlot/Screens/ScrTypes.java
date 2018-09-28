@@ -34,7 +34,6 @@ import java.util.Iterator;
 import java.util.List;
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
-import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import PolyGlot.CustomControls.PTextPane;
@@ -86,17 +85,13 @@ public class ScrTypes extends PFrame {
     }
 
     @Override
-    public boolean thisOrChildrenFocused() {
-        return this.isFocusOwner();
-    }
-
-    @Override
     public void updateAllValues(DictCore _core) {
         if (!ignoreUpdate) {
             ignoreUpdate = true;
             core = _core;
             populateTypes();
             populateProperties();
+            
             ignoreUpdate = false;
         }
     }
@@ -176,7 +171,7 @@ public class ScrTypes extends PFrame {
         } else {
             txtErrorBox.setText("");
             lstTypes.setEnabled(true);
-            txtName.setBackground(new JTextField().getBackground());
+            ((PTextField)txtName).setupLook();
         }
 
         if (updatingName || curNode == null) {
@@ -223,11 +218,8 @@ public class ScrTypes extends PFrame {
                 txtName.setText("");
                 updatingName = false;
             }
-            txtName.setForeground(Color.lightGray);
             txtNotes.setText("");
-            txtNotes.setForeground(Color.lightGray);
             txtTypePattern.setText("");
-            txtTypePattern.setForeground(Color.lightGray);
             chkDefMand.setSelected(false);
             chkProcMand.setSelected(false);
             setPropertiesEnabled(false);
@@ -236,22 +228,14 @@ public class ScrTypes extends PFrame {
                 updatingName = true;
                 txtName.setText(curNode.getValue().length() == 0
                         ? ((PTextField) txtName).getDefaultValue() : curNode.getValue());
-                txtName.setForeground(curNode.getValue().length() == 0
-                        ? Color.lightGray : Color.black);
                 updatingName = false;
             }
             txtNotes.setText(curNode.getNotes().length() == 0
                     ? ((PTextPane) txtNotes).getDefaultValue() : curNode.getNotes());
-            txtNotes.setForeground(curNode.getNotes().length() == 0
-                    ? Color.lightGray : Color.black);
             txtTypePattern.setText(curNode.getPattern().length() == 0
                     ? ((PTextField) txtTypePattern).getDefaultValue() : curNode.getPattern());
-            txtTypePattern.setForeground(curNode.getPattern().length() == 0
-                    ? Color.lightGray : Color.black);
             txtGloss.setText(curNode.getGloss().length() == 0
                     ? ((PTextField) txtGloss).getDefaultValue() : curNode.getGloss());
-            txtGloss.setForeground(curNode.getGloss().length() == 0
-                    ? Color.lightGray : Color.black);
             chkDefMand.setSelected(curNode.isDefMandatory());
             chkProcMand.setSelected(curNode.isProcMandatory());
             setPropertiesEnabled(true);

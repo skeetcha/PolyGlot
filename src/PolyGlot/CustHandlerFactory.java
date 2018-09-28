@@ -37,9 +37,11 @@ import PolyGlot.CustomControls.GrammarChapNode;
 import PolyGlot.ManagersCollections.ConWordCollection;
 import PolyGlot.ManagersCollections.RomanizationManager;
 import PolyGlot.Nodes.EtyExternalParent;
+import PolyGlot.Nodes.ToDoNode;
 import PolyGlot.Nodes.WordClassValue;
 import PolyGlot.Nodes.WordClass;
 import java.io.InputStream;
+import java.time.Instant;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
@@ -60,18 +62,18 @@ public class CustHandlerFactory {
      * Creates appropriate handler to read file (based on version of PolyGlot
      * file was saved with)
      *
-     * @param fileStream stream of file to be loaded
+     * @param iStream stream of file to be loaded
      * @param core dictionary core
      * @return an appropriate handler for the xml file
      * @throws java.lang.Exception when unable to read given file or if file is
      * from newer version of PolyGlot
      */
-    public static CustHandler getCustHandler(InputStream fileStream, DictCore core) throws Exception {
+    public static CustHandler getCustHandler(InputStream iStream, DictCore core) throws Exception {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
         Document doc;
 
-        doc = dBuilder.parse(fileStream);
+        doc = dBuilder.parse(iStream);
         doc.getDocumentElement().normalize();
 
         // test for version number in pgd file, set to 0 if none found (pre 0.6)
@@ -99,6 +101,7 @@ public class CustHandlerFactory {
             String charRepValBuffer = "";
             int ruleIdBuffer = 0;
             String ruleValBuffer = "";
+            boolean blastSave = false;
             boolean blocalWord = false;
             boolean bconWord = false;
             boolean btype = false;
@@ -207,6 +210,8 @@ public class CustHandlerFactory {
             boolean betyExternalWordValue = false;
             boolean betyExternalWordOrigin = false;
             boolean betyExternalWordDefinition = false;
+            boolean btoDoNodeDone = false;
+            boolean btoDoNodeLabel = false;
             
             int wId;
             int wCId;
@@ -225,7 +230,9 @@ public class CustHandlerFactory {
                     String qName, Attributes attributes)
                     throws SAXException {
 
-                if (qName.equalsIgnoreCase(PGTUtil.wordXID)) {
+                if (qName.equalsIgnoreCase(PGTUtil.dictionarySaveDate)) {
+                    blastSave = true;
+                } else if (qName.equalsIgnoreCase(PGTUtil.wordXID)) {
                     core.getWordCollection().clear();
                 } else if (qName.equalsIgnoreCase(PGTUtil.proGuideXID)) {
                     proBuffer = new PronunciationNode();
@@ -459,6 +466,12 @@ public class CustHandlerFactory {
                      betyExternalWordOrigin = true;
                 } else if (qName.equalsIgnoreCase(PGTUtil.EtyExternalWordDefinitionXID)) {
                      betyExternalWordDefinition = true;
+                } else if (qName.equalsIgnoreCase(PGTUtil.ToDoNodeXID)) {
+                     core.getToDoManager().pushBuffer();
+                } else if (qName.equalsIgnoreCase(PGTUtil.ToDoNodeLabelXID)) {
+                     btoDoNodeLabel = true;
+                } else if (qName.equalsIgnoreCase(PGTUtil.ToDoNodeDoneXID)) {
+                     btoDoNodeDone = true;
                 }
             }
 
@@ -466,8 +479,9 @@ public class CustHandlerFactory {
             public void endElement(String uri, String localName,
                     String qName) throws SAXException {
 
-                // save word to word collection
-                if (qName.equalsIgnoreCase(PGTUtil.wordXID)) {
+                if (qName.equalsIgnoreCase(PGTUtil.dictionarySaveDate)) {
+                    blastSave = false;
+                } else if (qName.equalsIgnoreCase(PGTUtil.wordXID)) {
                     ConWord curWord = core.getWordCollection()
                             .getBufferWord();
 
@@ -850,6 +864,12 @@ public class CustHandlerFactory {
                      betyExternalWordOrigin = false;
                 } else if (qName.equalsIgnoreCase(PGTUtil.EtyExternalWordDefinitionXID)) {
                      betyExternalWordDefinition = false;
+                } else if (qName.equalsIgnoreCase(PGTUtil.ToDoNodeXID)) {
+                     core.getToDoManager().popBuffer();
+                } else if (qName.equalsIgnoreCase(PGTUtil.ToDoNodeLabelXID)) {
+                     btoDoNodeLabel = false;
+                } else if (qName.equalsIgnoreCase(PGTUtil.ToDoNodeDoneXID)) {
+                     btoDoNodeDone = false;
                 }
             }
 
@@ -857,7 +877,9 @@ public class CustHandlerFactory {
             public void characters(char ch[], int start, int length)
                     throws SAXException {
 
-                if (blocalWord) {
+                if (blastSave) {
+                    core.setLastSaveTime(Instant.parse(new String(ch, start, length)));
+                } else if (blocalWord) {
                     ConWord bufferWord = core.getWordCollection().getBufferWord();
                     bufferWord.setLocalWord(bufferWord.getLocalWord()
                             + new String(ch, start, length));
@@ -1220,6 +1242,11 @@ public class CustHandlerFactory {
                 } else if (betyExternalWordDefinition) {
                     EtyExternalParent ext = core.getEtymologyManager().getBufferExtParent();
                     ext.setDefinition(ext.getDefinition() + new String(ch, start, length));
+                } else if (btoDoNodeLabel) {
+                    ToDoNode node = core.getToDoManager().getBuffer();
+                    node.setValue(node.toString() + new String(ch, start, length));
+                } else if (btoDoNodeDone) {
+                    core.getToDoManager().getBuffer().setDone(new String(ch, start, length).equals(PGTUtil.True));
                 }
             }
             

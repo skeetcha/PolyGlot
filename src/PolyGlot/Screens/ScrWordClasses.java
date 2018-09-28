@@ -362,6 +362,7 @@ public class ScrWordClasses extends PFrame {
 
     private void delPropertyValue() {
         PTableModel tableModel = (PTableModel) tblValues.getModel();
+        WordClass curProp = lstProperties.getSelectedValue();
 
         if (tblValues.getCellEditor() != null) {
             tblValues.getCellEditor().stopCellEditing();
@@ -370,6 +371,12 @@ public class ScrWordClasses extends PFrame {
         int index = tblValues.getSelectedRow();
 
         if (index >= 0) {
+            tableModel.getValueAt(index, 0);
+            try {
+                curProp.deleteValue(curProp.getId());
+            } catch (Exception e) {
+                // do nothing. if it doesn't exist, deleting it is fine.
+            }
             tableModel.removeRow(index);
         }
     }
@@ -612,11 +619,6 @@ public class ScrWordClasses extends PFrame {
         populateTypes();
         populateWordProperties();
         populatePropertyValues();        
-    }
-
-    @Override
-    public boolean thisOrChildrenFocused() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

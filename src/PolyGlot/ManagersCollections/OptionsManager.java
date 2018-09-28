@@ -40,12 +40,15 @@ import javax.swing.UIManager;
 public class OptionsManager {
 
     private boolean animateWindows = false;
-    private List<String> lastFiles = new ArrayList<>();
+    private boolean nightMode = false;
+    private final List<String> lastFiles = new ArrayList<>();
     private final Map<String, Point> screenPos = new HashMap<>();
     private final Map<String, Dimension> screenSize = new HashMap<>();
     private final List<String> screensUp = new ArrayList<>();
     private Double menuFontSize = 0.0;
+    private int maxReversionCount = PGTUtil.defaultMaxRollbackVersions;
     private final DictCore core;
+    private int toDoBarPosition = -1;
 
     public OptionsManager(DictCore _core) {
         core = _core;
@@ -168,8 +171,24 @@ public class OptionsManager {
         return lastFiles;
     }
     
-    public void setLastFiles(List<String> _lastFiles) {
-        lastFiles = _lastFiles;
+    /**
+     * Pushes a recently opened file (if appropriate) into the recent files list
+     *
+     * @param file full path of file
+     */
+    public void pushRecentFile(String file) {
+        if (!lastFiles.isEmpty()
+                && lastFiles.contains(file)) {
+            lastFiles.remove(file);
+            lastFiles.add(file);
+            return;
+        }
+
+        while (lastFiles.size() > PGTUtil.optionsNumLastFiles) {
+            lastFiles.remove(0);
+        }
+
+        lastFiles.add(file);
     }
 
     /**
@@ -203,5 +222,29 @@ public class OptionsManager {
      */
     public void setAnimateWindows(boolean animateWindows) {
         this.animateWindows = animateWindows;
+    }
+
+    public boolean isNightMode() {
+        return nightMode;
+    }
+
+    public void setNightMode(boolean nightMode) {
+        this.nightMode = nightMode;
+    }
+
+    public int getMaxReversionCount() {
+        return maxReversionCount;
+    }
+
+    public void setMaxReversionCount(int maxRollbackVersions) {
+        this.maxReversionCount = maxRollbackVersions;
+    }
+
+    public int getToDoBarPosition() {
+        return toDoBarPosition;
+    }
+
+    public void setToDoBarPosition(int toDoBarPosition) {
+        this.toDoBarPosition = toDoBarPosition;
     }
 }
